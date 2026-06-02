@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mirage Detailing CRM</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #07080d;
+      --bg-secondary: #0d1119;
+      --glass: rgba(255, 255, 255, 0.08);
+      --glass-strong: rgba(255, 255, 255, 0.12);
+      --border-glass: rgba(255, 255, 255, 0.16);
+      --text-main: #f4f7ff;
+      --text-soft: #9da8be;
+      --gold: #d4af37;
+      --accent: #3d6bff;
+      --success: #00c389;
+      --danger: #ff4e64;
+      --shadow-main: 0 20px 50px rgba(0, 0, 0, 0.45);
+      --shadow-card: 0 14px 35px rgba(0, 0, 0, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text-main);
+      background:
+        radial-gradient(1200px 600px at 15% -20%, rgba(61, 107, 255, 0.25), transparent 60%),
+        radial-gradient(1000px 700px at 100% 10%, rgba(212, 175, 55, 0.2), transparent 60%),
+        var(--bg-primary);
+      background-attachment: fixed;
+      min-height: 100vh;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      pointer-events: none;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      filter: blur(70px);
+      z-index: -1;
+      animation: ambientMove 14s ease-in-out infinite alternate;
+    }
+
+    body::before {
+      top: -110px;
+      left: -120px;
+      background: rgba(61, 107, 255, 0.26);
+    }
+
+    body::after {
+      right: -90px;
+      bottom: -130px;
+      background: rgba(212, 175, 55, 0.2);
+      animation-duration: 18s;
+    }
+
+    @keyframes ambientMove {
+      from {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      to {
+        transform: translate3d(35px, -20px, 0) scale(1.1);
+      }
+    }
+
+    .glass {
+      background: var(--glass);
+      border: 1px solid var(--border-glass);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      box-shadow: var(--shadow-main);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 28px 22px;
+      background: linear-gradient(165deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+    }
+
+    .brand {
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 0.84rem;
+    }
+
+    .brand-title {
+      font-size: 2.1rem;
+      line-height: 1.1;
+      margin-top: 8px;
+      font-weight: 800;
+    }
+
+    .brand-sub {
+      margin-top: 6px;
+      color: var(--text-soft);
+      font-size: 0.95rem;
+    }
+
+    .menu {
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .menu-btn {
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 13px 14px;
+      text-align: left;
+      color: var(--text-main);
+      background: transparent;
+      cursor: pointer;
+      transition: 0.25s ease;
+      font-size: 0.95rem;
+    }
+
+    .menu-btn:hover {
+      border-color: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .menu-btn.active {
+      background: linear-gradient(135deg, rgba(61, 107, 255, 0.26), rgba(212, 175, 55, 0.16));
+      border-color: rgba(212, 175, 55, 0.38);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .add-btn {
+      margin-top: 24px;
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 13px 16px;
+      color: #041325;
+      background: linear-gradient(125deg, #d4af37, #ffe08a);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      box-shadow: 0 12px 30px rgba(212, 175, 55, 0.35);
+    }
+
+    .add-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 35px rgba(212, 175, 55, 0.42);
+    }
+
+    .main {
+      padding: 26px;
+    }
+
+    .panel {
+      display: none;
+      animation: panelIn 0.38s ease;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    @keyframes panelIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .panel-title {
+      font-size: 1.55rem;
+      font-weight: 700;
+    }
+
+    .panel-sub {
+      color: var(--text-soft);
+      margin-top: 4px;
+      font-size: 0.95rem;
+    }
+
+    .requests-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .request-card {
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      padding: 14px 16px;
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow-card);
+      transition: transform 0.24s ease, border-color 0.24s ease;
+      cursor: pointer;
+    }
+
+    .request-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: linear-gradient(130deg, rgba(212, 175, 55, 0.12), transparent 38%);
+      opacity: 0;
+      transition: opacity 0.24s ease;
+      pointer-events: none;
+    }
+
+    .request-card:hover {
+      transform: translateY(-2px) scale(1.01);
+      border-color: rgba(212, 175, 55, 0.36);
+    }
+
+    .request-card:hover::before {
+      opacity: 1;
+    }
+
+    .request-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .request-name {
+      font-weight: 600;
+      font-size: 1.04rem;
+    }
+
+    .request-meta {
+      margin-top: 4px;
+      color: var(--text-soft);
+      font-size: 0.9rem;
+    }
+
+    .request-date {
+      color: #d0daf8;
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .accordion-content {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease, opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .request-card.open .accordion-content {
+      max-height: 560px;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .details-grid {
+      margin-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.11);
+      padding-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+      color: #d6def5;
+      font-size: 0.9rem;
+    }
+
+    .detail-item b {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--text-soft);
+      font-size: 0.79rem;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .comment-line {
+      margin-top: 10px;
+      color: #f0f4ff;
+      font-size: 0.93rem;
+      line-height: 1.45;
+    }
+
+    .card-actions {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 9px 14px;
+      cursor: pointer;
+      transition: 0.2s ease;
+      font-weight: 600;
+      font-size: 0.87rem;
+    }
+
+    .btn-danger {
+      background: rgba(255, 78, 100, 0.16);
+      color: #ff7b8d;
+      border-color: rgba(255, 78, 100, 0.45);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 78, 100, 0.24);
+    }
+
+    .btn-success {
+      background: rgba(0, 195, 137, 0.16);
+      color: #34e0ad;
+      border-color: rgba(0, 195, 137, 0.45);
+    }
+
+    .btn-success:hover {
+      background: rgba(0, 195, 137, 0.25);
+    }
+
+    .btn-primary {
+      background: rgba(61, 107, 255, 0.16);
+      color: #93adff;
+      border-color: rgba(61, 107, 255, 0.45);
+    }
+
+    .btn-primary:hover {
+      background: rgba(61, 107, 255, 0.24);
+    }
+
+    .empty {
+      border-radius: 14px;
+      border: 1px dashed rgba(255, 255, 255, 0.22);
+      padding: 22px;
+      text-align: center;
+      color: var(--text-soft);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .analytics {
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: linear-gradient(165deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .profit-label {
+      font-size: 0.88rem;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .profit-value {
+      margin-top: 8px;
+      font-size: clamp(1.8rem, 5vw, 3.2rem);
+      font-weight: 800;
+      color: #ffe7a8;
+      text-shadow: 0 10px 35px rgba(212, 175, 55, 0.28);
+    }
+
+    .profit-note {
+      color: var(--text-soft);
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    .periods {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .period-btn {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
+      color: #dce4ff;
+      border-radius: 12px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: 0.2s ease;
+      font-size: 0.86rem;
+    }
+
+    .period-btn.active {
+      background: rgba(61, 107, 255, 0.2);
+      border-color: rgba(61, 107, 255, 0.45);
+      color: #a9beff;
+    }
+
+    .period-btn:hover {
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    .backup-btn {
+      margin-top: 24px;
+    }
+
+    .accounting-actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .accounting-actions .btn {
+      margin-top: 0;
+    }
+
+    .modal-root {
+      position: fixed;
+      inset: 0;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+    }
+
+    .modal-root.open {
+      display: flex;
+      animation: fadeIn 0.28s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(4, 6, 10, 0.75);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .modal-box {
+      position: relative;
+      width: min(720px, calc(100vw - 26px));
+      max-height: calc(100vh - 30px);
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: linear-gradient(170deg, rgba(10, 14, 23, 0.92), rgba(13, 17, 26, 0.94));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 26px 60px rgba(0, 0, 0, 0.55);
+      padding: 20px;
+      transform: scale(0.95);
+      opacity: 0;
+      animation: modalIn 0.32s ease forwards;
+    }
+
+    @keyframes modalIn {
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .modal-title {
+      font-size: 1.23rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal-sub {
+      color: var(--text-soft);
+      font-size: 0.92rem;
+      margin-bottom: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.span-2 {
+      grid-column: span 2;
+    }
+
+    .field label {
+      color: #ccd6ef;
+      font-size: 0.85rem;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      padding: 10px 11px;
+      font-size: 0.94rem;
+      outline: none;
+      transition: 0.2s ease;
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .field select option {
+      color: #09121f;
+      background: #f4f7ff;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      border-color: rgba(61, 107, 255, 0.55);
+      box-shadow: 0 0 0 3px rgba(61, 107, 255, 0.16);
+    }
+
+    .modal-actions {
+      margin-top: 16px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .toast-wrap {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      min-width: 260px;
+      max-width: 360px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(11, 16, 25, 0.92);
+      color: #e9efff;
+      box-shadow: var(--shadow-card);
+      padding: 10px 12px;
+      animation: toastIn 0.28s ease;
+    }
+
+    .toast.success {
+      border-color: rgba(0, 195, 137, 0.48);
+    }
+
+    .toast.error {
+      border-color: rgba(255, 78, 100, 0.5);
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .menu {
+        flex-direction: row;
+        overflow: auto;
+      }
+
+      .menu-btn {
+        white-space: nowrap;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .field.span-2 {
+        grid-column: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar glass">
+      <div class="brand">Premium Auto Care</div>
+      <div class="brand-title">Mirage Detailing</div>
+      <div class="brand-sub">CRM и бухгалтерия студии</div>
+
+      <nav class="menu" id="tabMenu">
+        <button class="menu-btn active" data-tab="new">Необработанные</button>
+        <button class="menu-btn" data-tab="processed">Обработанные</button>
+        <button class="menu-btn" data-tab="accounting">Бухгалтерия</button>
+      </nav>
+
+      <button class="add-btn" id="openAddModal">Добавить заявку</button>
+    </aside>
+
+    <main class="main">
+      <section class="panel active" data-panel="new">
+        <div class="panel-head">
+          <div>
+            <h1 class="panel-title">Необработанные заявки</h1>
+            <p class="panel-sub">Новые обращения клиентов и предварительная оценка услуг</p>
+          </div>
+          <span id="newCount" class="panel-sub"></span>
+        </div>
+        <div class="requests-list" id="newList"></div>
+      </section>
+
+      <section class="panel" data-panel="processed">
+        <div class="panel-head">
+          <div>
+            <h1 class="panel-title">Обработанные заявки</h1>
+            <p class="panel-sub">Заказы после осмотра с финальной ценой перед закрытием</p>
+          </div>
+          <span id="processedCount" class="panel-sub"></span>
+        </div>
+        <div class="requests-list" id="processedList"></div>
+      </section>
+
+      <section class="panel" data-panel="accounting">
+        <div class="panel-head">
+          <div>
+            <h1 class="panel-title">Бухгалтерия</h1>
+            <p class="panel-sub">Финансовая аналитика закрытых заказов</p>
+          </div>
+        </div>
+
+        <div class="analytics">
+          <div class="profit-label">Общая прибыль за выбранный период</div>
+          <div class="profit-value" id="profitValue">0 BYN</div>
+          <div class="profit-note" id="profitNote">0 закрытых заказов</div>
+
+          <div class="periods" id="periodFilters">
+            <button class="period-btn active" data-period="1m">За месяц</button>
+            <button class="period-btn" data-period="3m">За 3 месяца</button>
+            <button class="period-btn" data-period="6m">За полгода</button>
+            <button class="period-btn" data-period="12m">За год</button>
+            <button class="period-btn" data-period="all">За все время</button>
+          </div>
+
+          <div class="accounting-actions">
+            <button class="btn btn-primary backup-btn" id="backupBtn">Скачать резервную копию (Excel)</button>
+            <button class="btn btn-danger" id="resetAccountingBtn">Сбросить бухгалтерию</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-root" id="modalRoot">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-box" id="modalBox"></div>
+  </div>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script>
+    const STORAGE_KEY = 'mirageDetailingCRMData';
+    const CURRENCY = 'BYN';
+    const SERVICES = [
+      'Полировка',
+      'Химчистка салона',
+      'Сварка',
+      'Замена ходовой части',
+      'Замена масла',
+      'Замена подшипников'
+    ];
+
+    const state = {
+      applications: [],
+      activeTab: 'new',
+      activePeriod: '1m',
+      openIds: {
+        new: new Set(),
+        processed: new Set()
+      }
+    };
+
+    const refs = {
+      tabMenu: document.getElementById('tabMenu'),
+      panels: document.querySelectorAll('.panel'),
+      newList: document.getElementById('newList'),
+      processedList: document.getElementById('processedList'),
+      newCount: document.getElementById('newCount'),
+      processedCount: document.getElementById('processedCount'),
+      periodFilters: document.getElementById('periodFilters'),
+      profitValue: document.getElementById('profitValue'),
+      profitNote: document.getElementById('profitNote'),
+      openAddModal: document.getElementById('openAddModal'),
+      modalRoot: document.getElementById('modalRoot'),
+      modalBackdrop: document.getElementById('modalBackdrop'),
+      modalBox: document.getElementById('modalBox'),
+      toastWrap: document.getElementById('toastWrap'),
+      backupBtn: document.getElementById('backupBtn'),
+      resetAccountingBtn: document.getElementById('resetAccountingBtn')
+    };
+
+    function init() {
+      loadData();
+      bindEvents();
+      renderAll();
+    }
+
+    function bindEvents() {
+      refs.tabMenu.addEventListener('click', (event) => {
+        const btn = event.target.closest('.menu-btn');
+        if (!btn) return;
+        switchTab(btn.dataset.tab);
+      });
+
+      refs.openAddModal.addEventListener('click', openAddModal);
+      refs.modalBackdrop.addEventListener('click', closeModal);
+
+      refs.periodFilters.addEventListener('click', (event) => {
+        const btn = event.target.closest('.period-btn');
+        if (!btn) return;
+        state.activePeriod = btn.dataset.period;
+        renderAccounting();
+      });
+
+      refs.backupBtn.addEventListener('click', downloadBackup);
+      refs.resetAccountingBtn.addEventListener('click', resetAccounting);
+    }
+
+    function loadData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        state.applications = raw ? JSON.parse(raw) : [];
+      } catch (error) {
+        state.applications = [];
+        showToast('Ошибка чтения localStorage. Создано пустое хранилище.', 'error');
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.applications));
+    }
+
+    function renderAll() {
+      renderTabButtons();
+      renderPanels();
+      renderLists();
+      renderAccounting();
+    }
+
+    function switchTab(tab) {
+      if (state.activeTab === tab) return;
+      state.activeTab = tab;
+      renderTabButtons();
+      renderPanels();
+    }
+
+    function renderTabButtons() {
+      refs.tabMenu.querySelectorAll('.menu-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
+      });
+    }
+
+    function renderPanels() {
+      refs.panels.forEach((panel) => {
+        panel.classList.toggle('active', panel.dataset.panel === state.activeTab);
+      });
+    }
+
+    function renderLists() {
+      const newItems = state.applications.filter((item) => item.status === 'new');
+      const processedItems = state.applications.filter((item) => item.status === 'processed');
+
+      refs.newCount.textContent = `${newItems.length} шт.`;
+      refs.processedCount.textContent = `${processedItems.length} шт.`;
+
+      renderRequestList(refs.newList, newItems, 'new');
+      renderRequestList(refs.processedList, processedItems, 'processed');
+    }
+
+    function renderRequestList(container, items, type) {
+      if (!items.length) {
+        container.innerHTML = `<div class="empty">Пока нет заявок в этом разделе.</div>`;
+        return;
+      }
+
+      container.innerHTML = items
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .map((item) => {
+          const isOpen = state.openIds[type].has(item.id);
+          const priceValue = type === 'processed'
+            ? toMoney(item.processData?.finalPrice || 0)
+            : toMoney(item.price || 0);
+
+          const baseDetails = `
+            <div class="details-grid">
+              <div class="detail-item"><b>Телефон</b>${escapeHtml(item.phone || '-')}</div>
+              <div class="detail-item"><b>Услуга</b>${escapeHtml(item.service || '-')}</div>
+              <div class="detail-item"><b>Цена</b>${priceValue}</div>
+              <div class="detail-item"><b>Дата встречи</b>${formatDate(item.appointmentDate)}</div>
+            </div>
+            <div class="comment-line"><b style="color:#9da8be">Комментарий:</b> ${escapeHtml(item.comment || 'Без комментария')}</div>
+          `;
+
+          const processedDetails = item.processData
+            ? `
+              <div class="details-grid" style="margin-top:12px; border-top: 1px solid rgba(255,255,255,.08); padding-top:10px;">
+                <div class="detail-item"><b>Сроки работы</b>${escapeHtml(item.processData.timeline || 'Не указано')}</div>
+                <div class="detail-item"><b>VIN кузова</b>${escapeHtml(item.processData.vin || 'Не указано')}</div>
+                <div class="detail-item"><b>Telegram/Viber</b>${escapeHtml(item.processData.messenger || 'Не указано')}</div>
+                <div class="detail-item"><b>Финальная цена</b>${toMoney(item.processData.finalPrice || 0)}</div>
+              </div>
+            `
+            : '';
+
+          const actions = type === 'new'
+            ? `
+              <div class="card-actions">
+                <button class="btn btn-danger" data-action="delete" data-id="${item.id}">Удалить</button>
+                <button class="btn btn-success" data-action="process" data-id="${item.id}">Обработать</button>
+              </div>
+            `
+            : `
+              <div class="card-actions">
+                <button class="btn btn-danger" data-action="delete" data-id="${item.id}">Удалить заказ</button>
+                <button class="btn btn-success" data-action="finish" data-id="${item.id}">Завершить заказ</button>
+              </div>
+            `;
+
+          return `
+            <article class="request-card ${isOpen ? 'open' : ''}" data-id="${item.id}" data-type="${type}">
+              <div class="request-top">
+                <div>
+                  <div class="request-name">${escapeHtml(item.clientName)}</div>
+                  <div class="request-meta">${escapeHtml(item.car)}</div>
+                </div>
+                <div class="request-date">${formatDate(item.appointmentDate)}</div>
+              </div>
+              <div class="accordion-content">
+                ${baseDetails}
+                ${processedDetails}
+                ${actions}
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+
+      // Делегирование кликов по карточке и кнопкам внутри, чтобы не вешать много обработчиков.
+      container.querySelectorAll('.request-card').forEach((card) => {
+        card.addEventListener('click', (event) => {
+          const actionBtn = event.target.closest('[data-action]');
+          if (actionBtn) {
+            event.stopPropagation();
+            handleCardAction(actionBtn.dataset.action, actionBtn.dataset.id, type);
+            return;
+          }
+          toggleAccordion(type, card.dataset.id);
+        });
+      });
+    }
+
+    function toggleAccordion(type, id) {
+      if (state.openIds[type].has(id)) {
+        state.openIds[type].delete(id);
+      } else {
+        state.openIds[type].add(id);
+      }
+      renderLists();
+    }
+
+    function handleCardAction(action, id, type) {
+      const item = state.applications.find((entry) => entry.id === id);
+      if (!item) return;
+
+      if (action === 'delete') {
+        openConfirmModal({
+          title: 'Подтверждение удаления',
+          text: 'Удалить заявку без возможности восстановления?',
+          confirmText: 'Удалить',
+          confirmClass: 'btn-danger',
+          onConfirm: () => {
+            state.applications = state.applications.filter((entry) => entry.id !== id);
+            saveData();
+            renderLists();
+            renderAccounting();
+            showToast(type === 'processed' ? 'Заказ удален' : 'Заявка удалена', 'success');
+          }
+        });
+      }
+
+      if (action === 'process') {
+        openProcessModal(item);
+      }
+
+      if (action === 'finish') {
+        openFinishModal(item);
+      }
+    }
+
+    function openAddModal() {
+      openModal(`
+        <h2 class="modal-title">Новая заявка</h2>
+        <p class="modal-sub">Добавьте данные клиента и запись появится во вкладке "Необработанные".</p>
+        <form id="addForm" class="form-grid">
+          <div class="field"><label>Имя клиента *</label><input name="clientName" required /></div>
+          <div class="field"><label>Телефон *</label><input name="phone" required /></div>
+          <div class="field span-2"><label>Марка и модель авто *</label><input name="car" required /></div>
+          <div class="field">
+            <label>Услуга *</label>
+            <input name="service" list="serviceOptions" placeholder="Выберите из списка или введите вручную" required />
+            <datalist id="serviceOptions">
+              ${SERVICES.map((service) => `<option value="${service}"></option>`).join('')}
+            </datalist>
+          </div>
+          <div class="field"><label>Цена (BYN) *</label><input name="price" type="number" step="0.01" min="0" required /></div>
+          <div class="field"><label>Дата встречи *</label><input name="appointmentDate" type="date" required /></div>
+          <div class="field span-2"><label>Комментарий</label><textarea name="comment" placeholder="Пожелания клиента, состояние авто, детали заявки"></textarea></div>
+          <div class="modal-actions span-2">
+            <button type="button" class="btn btn-primary" id="cancelAdd">Отмена</button>
+            <button type="submit" class="btn btn-success">Сохранить заявку</button>
+          </div>
+        </form>
+      `);
+
+      document.getElementById('cancelAdd').addEventListener('click', closeModal);
+      document.getElementById('addForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        const payload = {
+          id: crypto.randomUUID(),
+          clientName: String(formData.get('clientName')).trim(),
+          phone: String(formData.get('phone')).trim(),
+          car: String(formData.get('car')).trim(),
+          service: String(formData.get('service')).trim(),
+          price: Number(formData.get('price')),
+          appointmentDate: String(formData.get('appointmentDate')),
+          comment: String(formData.get('comment') || '').trim(),
+          status: 'new',
+          createdAt: new Date().toISOString(),
+          processData: null,
+          finishedAt: null
+        };
+
+        state.applications.push(payload);
+        saveData();
+        closeModal();
+        switchTab('new');
+        renderLists();
+        renderAccounting();
+        showToast('Заявка принята', 'success');
+      });
+    }
+
+    function openProcessModal(item) {
+      openModal(`
+        <h2 class="modal-title">Обработка заявки</h2>
+        <p class="modal-sub">Заполните результат осмотра и подтвердите финальную цену.</p>
+        <form id="processForm" class="form-grid">
+          <div class="field"><label>Имя *</label><input name="clientName" value="${escapeAttr(item.clientName)}" required /></div>
+          <div class="field"><label>Телефон *</label><input name="phone" value="${escapeAttr(item.phone)}" required /></div>
+          <div class="field span-2"><label>Авто *</label><input name="car" value="${escapeAttr(item.car)}" required /></div>
+          <div class="field span-2">
+            <label>Услуга *</label>
+            <input name="service" value="${escapeAttr(item.service || '')}" list="serviceOptionsProcess" placeholder="Выберите из списка или введите вручную" required />
+            <datalist id="serviceOptionsProcess">
+              ${SERVICES.map((service) => `<option value="${service}"></option>`).join('')}
+            </datalist>
+          </div>
+          <div class="field"><label>Сроки работы</label><input name="timeline" value="${escapeAttr(item.processData?.timeline || '')}" placeholder="Например: 2-3 дня" /></div>
+          <div class="field"><label>VIN кузова</label><input name="vin" value="${escapeAttr(item.processData?.vin || '')}" /></div>
+          <div class="field"><label>Telegram/Viber</label><input name="messenger" value="${escapeAttr(item.processData?.messenger || '')}" placeholder="@username или номер" /></div>
+          <div class="field"><label>Финальная цена (BYN) *</label><input name="finalPrice" type="number" min="0" step="0.01" value="${item.processData?.finalPrice || item.price || ''}" required /></div>
+          <div class="modal-actions span-2">
+            <button type="button" class="btn btn-primary" id="cancelProcess">Отмена</button>
+            <button type="submit" class="btn btn-success">Сохранить обработку</button>
+          </div>
+        </form>
+      `);
+
+      document.getElementById('cancelProcess').addEventListener('click', closeModal);
+      document.getElementById('processForm').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+
+        item.clientName = String(formData.get('clientName')).trim();
+        item.phone = String(formData.get('phone')).trim();
+        item.car = String(formData.get('car')).trim();
+        item.service = String(formData.get('service')).trim();
+        item.status = 'processed';
+        item.processedAt = new Date().toISOString();
+        item.processData = {
+          timeline: String(formData.get('timeline') || '').trim(),
+          vin: String(formData.get('vin') || '').trim(),
+          messenger: String(formData.get('messenger') || '').trim(),
+          finalPrice: Number(formData.get('finalPrice'))
+        };
+
+        saveData();
+        closeModal();
+        renderLists();
+        renderAccounting();
+        switchTab('processed');
+        showToast('Заявка обработана', 'success');
+      });
+    }
+
+    function openFinishModal(item) {
+      openModal(`
+        <h2 class="modal-title">Завершить заказ</h2>
+        <p class="modal-sub">Проверьте сводку перед переносом в бухгалтерию.</p>
+        <div class="details-grid" style="margin-top: 0; border-top: none; padding-top: 0;">
+          <div class="detail-item"><b>Сумма</b>${toMoney(item.processData?.finalPrice || 0)}</div>
+          <div class="detail-item"><b>Имя</b>${escapeHtml(item.clientName)}</div>
+          <div class="detail-item"><b>Услуга</b>${escapeHtml(item.service)}</div>
+          <div class="detail-item"><b>Телефон</b>${escapeHtml(item.phone)}</div>
+          <div class="detail-item"><b>Авто</b>${escapeHtml(item.car)}</div>
+        </div>
+        <div class="modal-actions" style="margin-top:18px;">
+          <button type="button" class="btn btn-primary" id="cancelFinish">Отмена</button>
+          <button type="button" class="btn btn-success" id="confirmFinish">Подтвердить</button>
+        </div>
+      `);
+
+      document.getElementById('cancelFinish').addEventListener('click', closeModal);
+      document.getElementById('confirmFinish').addEventListener('click', () => {
+        item.status = 'finished';
+        item.finishedAt = new Date().toISOString();
+        saveData();
+        closeModal();
+        renderLists();
+        renderAccounting();
+        switchTab('accounting');
+        showToast('Заказ закрыт', 'success');
+      });
+    }
+
+    function openConfirmModal({ title, text, confirmText, confirmClass, onConfirm }) {
+      openModal(`
+        <h2 class="modal-title">${escapeHtml(title)}</h2>
+        <p class="modal-sub">${escapeHtml(text)}</p>
+        <div class="modal-actions" style="margin-top: 20px;">
+          <button type="button" class="btn btn-primary" id="confirmCancel">Отмена</button>
+          <button type="button" class="btn ${confirmClass}" id="confirmOk">${escapeHtml(confirmText)}</button>
+        </div>
+      `);
+
+      document.getElementById('confirmCancel').addEventListener('click', closeModal);
+      document.getElementById('confirmOk').addEventListener('click', () => {
+        onConfirm();
+        closeModal();
+      });
+    }
+
+    function openModal(html) {
+      refs.modalBox.innerHTML = html;
+      refs.modalRoot.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      refs.modalRoot.classList.remove('open');
+      refs.modalBox.innerHTML = '';
+      document.body.style.overflow = '';
+    }
+
+    function renderAccounting() {
+      refs.periodFilters.querySelectorAll('.period-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.period === state.activePeriod);
+      });
+
+      const finished = state.applications.filter((item) => item.status === 'finished');
+      const filtered = filterByPeriod(finished, state.activePeriod);
+      const total = filtered.reduce((sum, item) => sum + Number(item.processData?.finalPrice || 0), 0);
+
+      refs.profitValue.textContent = `${toNumber(total)} ${CURRENCY}`;
+      refs.profitNote.textContent = `${filtered.length} закрытых заказов`;
+    }
+
+    function filterByPeriod(items, period) {
+      if (period === 'all') return items;
+
+      const now = new Date();
+      const map = { '1m': 1, '3m': 3, '6m': 6, '12m': 12 };
+      const months = map[period] || 1;
+      const start = new Date(now);
+      start.setMonth(start.getMonth() - months);
+
+      return items.filter((item) => {
+        const date = item.finishedAt ? new Date(item.finishedAt) : null;
+        return date && date >= start;
+      });
+    }
+
+    function downloadBackup() {
+      if (typeof XLSX === 'undefined') {
+        showToast('Библиотека Excel не загружена', 'error');
+        return;
+      }
+
+      // Лист заявок с нормализованными полями для удобной резервной копии.
+      const appRows = state.applications.map((item) => ({
+        ID: item.id,
+        Статус: item.status,
+        Клиент: item.clientName,
+        Телефон: item.phone,
+        Авто: item.car,
+        Услуга: item.service,
+        'Предварительная цена BYN': item.price || 0,
+        'Финальная цена BYN': item.processData?.finalPrice || 0,
+        'Дата встречи': item.appointmentDate || '',
+        'Сроки работы': item.processData?.timeline || '',
+        VIN: item.processData?.vin || '',
+        'Telegram/Viber': item.processData?.messenger || '',
+        Комментарий: item.comment || '',
+        'Создано': item.createdAt || '',
+        'Обработано': item.processedAt || '',
+        'Закрыто': item.finishedAt || ''
+      }));
+
+      const storageRows = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        storageRows.push({
+          Key: key,
+          Value: localStorage.getItem(key)
+        });
+      }
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(appRows), 'Applications');
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(storageRows), 'LocalStorage');
+
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(workbook, `mirage-detailing-backup-${dateStamp}.xlsx`);
+      showToast('Резервная копия скачана', 'success');
+    }
+
+    function resetAccounting() {
+      const finishedCount = state.applications.filter((item) => item.status === 'finished').length;
+      if (!finishedCount) {
+        showToast('В бухгалтерии нет закрытых заказов для сброса', 'error');
+        return;
+      }
+
+      openConfirmModal({
+        title: 'Сброс бухгалтерии',
+        text: `Будут удалены все закрытые заказы (${finishedCount} шт.) из бухгалтерии. Продолжить?`,
+        confirmText: 'Сбросить',
+        confirmClass: 'btn-danger',
+        onConfirm: () => {
+          state.applications = state.applications.filter((item) => item.status !== 'finished');
+          saveData();
+          renderLists();
+          renderAccounting();
+          showToast('Бухгалтерия сброшена', 'success');
+        }
+      });
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      refs.toastWrap.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        toast.style.transition = '0.25s ease';
+        setTimeout(() => toast.remove(), 260);
+      }, 2200);
+    }
+
+    function toMoney(value) {
+      return `${toNumber(value)} ${CURRENCY}`;
+    }
+
+    function toNumber(value) {
+      return Number(value || 0).toLocaleString('ru-RU', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatDate(value) {
+      if (!value) return 'Не указано';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleDateString('ru-RU');
+    }
+
+    function escapeHtml(str = '') {
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function escapeAttr(str = '') {
+      return escapeHtml(str).replaceAll('`', '&#96;');
+    }
+
+    init();
+  </script>
+</body>
+</html>
